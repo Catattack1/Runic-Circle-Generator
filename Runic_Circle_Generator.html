@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runic Circle Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: #2a2a3e;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #e94560;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            color: #d4d4d4;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #3a3a4e;
+            border: 2px solid #4a4a5e;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        
+        .info-box {
+            background: #3a3a4e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #d4d4d4;
+            font-size: 14px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .info-item {
+            padding: 5px 0;
+        }
+        
+        .canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        canvas {
+            border: 2px solid #4a4a5e;
+            border-radius: 8px;
+            background: #1a1a2e;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+        }
+        
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        button:hover {
+            background: #d63851;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .footer {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⭕ Runic Circle Generator</h1>
+        
+        <div class="input-group">
+            <label for="seedInput">Enter Your Seed:</label>
+            <input type="text" id="seedInput" value="Thor" placeholder="Thor, your name, a date...">
+        </div>
+        
+        <div id="infoBox" class="info-box">
+            <div class="info-grid">
+                <div class="info-item"><strong>Seed Sequence:</strong> <span id="seedSeq"></span></div>
+                <div class="info-item"><strong>Circles:</strong> <span id="numCircles"></span></div>
+                <div class="info-item"><strong>Last Seed:</strong> <span id="lastSeed"></span></div>
+                <div class="info-item"><strong>Orientation:</strong> <span id="orientation"></span></div>
+            </div>
+        </div>
+        
+        <div class="canvas-wrapper">
+            <canvas id="runicCanvas" width="600" height="600"></canvas>
+        </div>
+        
+        <div class="button-group">
+            <button id="downloadBtn">
+                <span>⬇</span>
+                Download Runic Circle
+            </button>
+        </div>
+        
+        <div class="footer">
+            Each seed generates a unique, deterministic runic circle following ancient magical principles.
+        </div>
+    </div>
+
+    <script>
+        // Elder Futhark runes (24 runes)
+        const runes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᚾ', 'ᛁ', 'ᛃ', 'ᛇ', 'ᛈ', 'ᛉ', 'ᛊ', 'ᛏ', 'ᛒ', 'ᛖ', 'ᛗ', 'ᛚ', 'ᛜ', 'ᛞ', 'ᛟ'];
+        
+        const canvas = document.getElementById('runicCanvas');
+        const ctx = canvas.getContext('2d');
+        const seedInput = document.getElementById('seedInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        // Normalize seed to number sequence
+        function normalizeSeed(input) {
+            return input.toUpperCase().split('').map(char => {
+                const code = char.charCodeAt(0);
+                if (code >= 65 && code <= 90) return code - 64; // A=1, Z=26
+                if (code >= 48 && code <= 57) return parseInt(char); // 0-9
+                return 0; // Ignore special chars
+            }).filter(n => n > 0);
+        }
+        
+        // Draw the runic circle
+        function drawRunicCircle(seed) {
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            
+            // Clear canvas
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            const seedSeq = normalizeSeed(seed);
+            if (seedSeq.length === 0) return;
+            
+            // Update info display
+            document.getElementById('seedSeq').textContent = '[' + seedSeq.join(', ') + ']';
+            const numCircles = (seedSeq.length % 3) + 2;
+            document.getElementById('numCircles').textContent = numCircles;
+            const lastSeed = seedSeq[seedSeq.length - 1];
+            document.getElementById('lastSeed').textContent = lastSeed + ' (' + (lastSeed % 2 === 0 ? 'Even - Emblem' : 'Odd - No Emblem') + ')';
+            document.getElementById('orientation').textContent = seedSeq[0] % 2 === 0 ? 'Radial' : 'Tangential';
+            
+            // Calculate circles
+            const baseRadius = Math.min(width, height) * 0.4;
+            const circles = [];
+            let currentRadius = baseRadius;
+            
+            for (let i = 0; i < numCircles; i++) {
+                const lineWeight = 1 + (seedSeq[i % seedSeq.length] % 3);
+                const runesCount = 8 + ((seedSeq[i % seedSeq.length] + i) % 8);
+                circles.push({ radius: currentRadius, lineWeight, runesCount });
+                
+                if (i < numCircles - 1) {
+                    currentRadius = currentRadius * (0.6 + (seedSeq[(i + 1) % seedSeq.length] % 10) / 50);
+                }
+            }
+            
+            // Draw circles and runes
+            const circleRunes = [];
+            let seedIndex = 0;
+            
+            circles.forEach((circle, circleIdx) => {
+                // Draw circle
+                ctx.strokeStyle = '#e94560';
+                ctx.lineWidth = circle.lineWeight;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circle.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Place runes
+                const runePositions = [];
+                ctx.fillStyle = '#f4a261';
+                ctx.font = '20px serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                for (let i = 0; i < circle.runesCount; i++) {
+                    const angle = (Math.PI * 2 * i) / circle.runesCount - Math.PI / 2;
+                    const x = centerX + Math.cos(angle) * circle.radius;
+                    const y = centerY + Math.sin(angle) * circle.radius;
+                    
+                    const runeIndex = (seedSeq[seedIndex % seedSeq.length] % runes.length);
+                    const rune = runes[runeIndex];
+                    
+                    ctx.save();
+                    ctx.translate(x, y);
+                    if (seedSeq[0] % 2 === 0) {
+                        ctx.rotate(angle + Math.PI / 2);
+                    }
+                    ctx.fillText(rune, 0, 0);
+                    ctx.restore();
+                    
+                    runePositions.push({ x, y, angle });
+                    seedIndex++;
+                }
+                
+                circleRunes.push(runePositions);
+            });
+            
+            // Draw inter-circle patterns
+            for (let i = 0; i < circles.length - 1; i++) {
+                const patternSeed = seedSeq[i % seedSeq.length] + seedSeq[(i + 1) % seedSeq.length];
+                const patternType = patternSeed % 6;
+                
+                ctx.strokeStyle = 'rgba(116, 185, 255, 0.3)';
+                ctx.lineWidth = 1;
+                
+                const outer = circleRunes[i];
+                const inner = circleRunes[i + 1];
+                
+                switch(patternType) {
+                    case 0: // Direct Link
+                        outer.forEach((outerPos, idx) => {
+                            const innerIdx = Math.floor((idx / outer.length) * inner.length);
+                            ctx.beginPath();
+                            ctx.moveTo(outerPos.x, outerPos.y);
+                            ctx.lineTo(inner[innerIdx].x, inner[innerIdx].y);
+                            ctx.stroke();
+                        });
+                        break;
+                        
+                    case 1: // Offset Link
+                        const offset = (patternSeed % 5) + 1;
+                        outer.forEach((outerPos, idx) => {
+                            const innerIdx = (Math.floor((idx / outer.length) * inner.length) + offset) % inner.length;
+                            ctx.beginPath();
+                            ctx.moveTo(outerPos.x, outerPos.y);
+                            ctx.lineTo(inner[innerIdx].x, inner[innerIdx].y);
+                            ctx.stroke();
+                        });
+                        break;
+                        
+                    case 2: // Web Link (limited)
+                        const webCount = Math.min(5, outer.length);
+                        for (let j = 0; j < webCount; j++) {
+                            const outerIdx = Math.floor((j / webCount) * outer.length);
+                            inner.forEach(innerPos => {
+                                ctx.beginPath();
+                                ctx.moveTo(outer[outerIdx].x, outer[outerIdx].y);
+                                ctx.lineTo(innerPos.x, innerPos.y);
+                                ctx.stroke();
+                            });
+                        }
+                        break;
+                        
+                    case 3: // Spoke Link
+                        outer.forEach(outerPos => {
+                            ctx.beginPath();
+                            ctx.moveTo(outerPos.x, outerPos.y);
+                            ctx.lineTo(centerX, centerY);
+                            ctx.stroke();
+                        });
+                        break;
+                        
+                    case 4: // Alternating Link
+                        outer.forEach((outerPos, idx) => {
+                            const innerIdx = (idx * 2) % inner.length;
+                            ctx.beginPath();
+                            ctx.moveTo(outerPos.x, outerPos.y);
+                            ctx.lineTo(inner[innerIdx].x, inner[innerIdx].y);
+                            ctx.stroke();
+                        });
+                        break;
+                        
+                    case 5: // Chaotic Link
+                        const connections = Math.min(10, outer.length);
+                        for (let j = 0; j < connections; j++) {
+                            const outerIdx = (patternSeed * j * 7) % outer.length;
+                            const innerIdx = (patternSeed * j * 13) % inner.length;
+                            ctx.beginPath();
+                            ctx.moveTo(outer[outerIdx].x, outer[outerIdx].y);
+                            ctx.lineTo(inner[innerIdx].x, inner[innerIdx].y);
+                            ctx.stroke();
+                        }
+                        break;
+                }
+            }
+            
+            // Central emblem
+            const lastSeedVal = seedSeq[seedSeq.length - 1];
+            if (lastSeedVal % 2 === 0) {
+                const sides = (lastSeedVal % 5) + 3;
+                const emblemRadius = circles[circles.length - 1].radius * 0.4;
+                
+                ctx.strokeStyle = '#e94560';
+                ctx.fillStyle = 'rgba(233, 69, 96, 0.2)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                for (let i = 0; i <= sides; i++) {
+                    const angle = (Math.PI * 2 * i) / sides - Math.PI / 2;
+                    const x = centerX + Math.cos(angle) * emblemRadius;
+                    const y = centerY + Math.sin(angle) * emblemRadius;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+        
+        // Export function
+        function handleExport() {
+            try {
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    const filename = 'runic-circle-' + seedInput.value.toLowerCase().replace(/\s+/g, '-') + '.png';
+                    link.download = filename;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
+            } catch (error) {
+                console.error('Export failed:', error);
+            }
+        }
+        
+        // Event listeners
+        seedInput.addEventListener('input', (e) => {
+            drawRunicCircle(e.target.value);
+        });
+        
+        downloadBtn.addEventListener('click', handleExport);
+        
+        // Initial draw
+        drawRunicCircle(seedInput.value);
+    </script>
+</body>
+</html>
